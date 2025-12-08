@@ -7,3 +7,12 @@ df = load_data()
 
 if st.button("Refresh App"):
     st.rerun()
+
+
+#Dashboards that could add value
+#Overall sales dashboard with date and segment breakdown
+#Customer spend dashboard that shows who is purchasing the most, and how many orders they are placing
+#Heatmap in the shape of a US map for sales that when you click a sate it opens up a zip code based map also
+#Shipping delay time to assess if any orders stand out over a threshold for KPI purposes
+#Sales over time based on selection of daily, monthly quarterly, etc. Inside of a date range that is truncated so if they choose quarterly they can't accidently select 17 weeks. Or after they have selected the time interval in the side, have it change the selectable date range.
+
