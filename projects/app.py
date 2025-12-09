@@ -7,7 +7,10 @@ df = load_data()
 
 if st.button("Refresh App"):
     st.rerun()
-
+st.markdown("**About this Project**")
+st.markdown("This interactive dashboard was developed as part of the INSY 6500" \
+" Exploratory Data Analysis project at Auburn University. " \
+"The goal is to explore customer purchasing behavior and sales performance using real transactional data.")
 
 #Dashboards that could add value
 #Overall sales dashboard with date and segment breakdown

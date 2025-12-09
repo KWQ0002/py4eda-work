@@ -4,39 +4,40 @@ import matplotlib.pyplot as plt
 from loader import load_data
 
 
-#setup the page titles
+#setup the page
 st.set_page_config(
     page_title="Sales",
     layout="wide"
 )
 
-# Page title
+#Page title
 st.title("Sales")
 
-# Load data
+#Load data
 df = load_data()
 
+#Filters
 st.sidebar.title("Filters")
 
-# Filters
+#segments
 segments = st.sidebar.multiselect(
     "Segment", #title it
     options=sorted(df["Segment"].dropna().unique()), #drop the non unique values
     default=sorted(df["Segment"].dropna().unique()) #default all selected
 )
-
+#regions
 regions = st.sidebar.multiselect(
     "Region", #title it
     options=sorted(df["Region"].dropna().unique()), #drop the non unique values
     default=sorted(df["Region"].dropna().unique()) #default all selected
 )
-
+#date range
 date_range = st.sidebar.date_input( #add a dateinput that selects date range
     "Order Date range", #title it
     value=(df["Order Date"].min(), df["Order Date"].max()) #default it to the min and max of the date range
 )
 
-# Apply filters
+#apply filters
 filtered = df[ #us isin and and between combined with & to stack the variety of filters.
     df["Segment"].isin(segments) 
     & df["Region"].isin(regions)

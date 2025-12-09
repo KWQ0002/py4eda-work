@@ -4,8 +4,7 @@ import plotly.express as px
 
 from loader import load_data  # shared train.csv loader
 
-
-# ---------- Page config ----------
+#setup the page
 st.set_page_config(
     page_title="Sales Over Time",
     layout="wide"
@@ -27,7 +26,7 @@ break down results by product category.
 """
 )
 
-# ---------- Sidebar controls ----------
+#Filters
 st.sidebar.header("Filters")
 
 # Aggregation level
@@ -38,7 +37,7 @@ agg_label_to_freq = {
     "Quarterly": "Q",
     "Yearly": "Y",
 }
-
+#
 agg_choice = st.sidebar.selectbox(
     "Aggregation level",
     options=list(agg_label_to_freq.keys()),
@@ -46,15 +45,16 @@ agg_choice = st.sidebar.selectbox(
 )
 freq = agg_label_to_freq[agg_choice]
 
+
 # Segment filter (if present)
-segments = sorted(df["Segment"].dropna().unique()) if "Segment" in df.columns else []
-if segments:
+segments = sorted(df["Segment"].dropna().unique()) if "Segment" in df.columns else []#if regions is not a column set as empty list
+if segments:#if regions is not an empty list set selected regions based on this
     selected_segments = st.sidebar.multiselect(
         "Segments",
         options=segments,
         default=segments,
     )
-else:
+else:#if it is an empty list, set it to empty
     selected_segments = segments  # empty list
 
 # Region filter (if present)
@@ -85,7 +85,7 @@ show_by_category = st.sidebar.checkbox(
     value=False
 )
 
-# ---------- Date range selection ----------
+#dates
 min_date = df["Order Date"].min().date()
 max_date = df["Order Date"].max().date()
 
@@ -100,7 +100,7 @@ date_range = st.sidebar.date_input(
 if isinstance(date_range, tuple) and len(date_range) == 2:
     start_date_raw, end_date_raw = date_range
 else:
-    start_date_raw = end_date_raw = date_range
+    start_date_raw = end_date_raw = date_range #if only one date was selected, start, end, and range are all equal
 
 # Align the selected dates to full periods for the chosen aggregation
 start_ts_raw = pd.to_datetime(start_date_raw)
@@ -116,13 +116,13 @@ aligned_end = end_period.end_time
 aligned_start = max(aligned_start, df["Order Date"].min())
 aligned_end = min(aligned_end, df["Order Date"].max())
 
-if (aligned_start.date() != start_date_raw) or (aligned_end.date() != end_date_raw):
+if (aligned_start.date() != start_date_raw) or (aligned_end.date() != end_date_raw): #if you are modifying the date range let the user know
     st.caption(
         f"Date range aligned to full **{agg_choice.lower()}** periods: "
         f"{aligned_start.date()} → {aligned_end.date()}."
     )
 
-# ---------- Apply filters ----------
+#apply filters
 mask = (df["Order Date"] >= aligned_start) & (df["Order Date"] <= aligned_end)
 
 if segments:
@@ -138,10 +138,10 @@ if filtered.empty:
     st.warning("No data available for the selected filters and date range.")
     st.stop()
 
-# ---------- Aggregate sales over time ----------
+#create data frame
 filtered = filtered.set_index("Order Date")
 
-if show_by_category and "Category" in filtered.columns:
+if show_by_category and "Category" in filtered.columns: #see if the data needs to be grouped by category for plotting
     # Group by Category and resample
     sales_over_time = (
         filtered
@@ -158,7 +158,7 @@ if show_by_category and "Category" in filtered.columns:
         period = sales_over_time["Order Date"].dt.to_period(freq)
         sales_over_time["Period"] = period.dt.to_timestamp()
 
-else:
+else: #if there isn't a desire to plot individual categories
     # Aggregate across all categories (single line)
     sales_over_time = (
         filtered["Sales"]
@@ -176,7 +176,7 @@ else:
     # Add a dummy Category column so plotting code can stay simple
     sales_over_time["Category"] = "All Categories"
 
-# ---------- KPIs ----------
+#KPIs
 st.subheader("Summary")
 
 total_sales = sales_over_time["Sales"].sum()
@@ -188,10 +188,10 @@ col1.metric("Total Sales", f"${total_sales:,.2f}")
 col2.metric(f"Avg {agg_choice} Sales", f"${avg_per_period:,.2f}")
 col3.metric("Number of Periods", f"{n_periods:,}")
 
-# ---------- Plot ----------
+#plot
 st.subheader(f"Sales Over Time ({agg_choice})")
 
-if show_by_category and "Category" in filtered.columns:
+if show_by_category and "Category" in filtered.columns: #if plotting individual category lines, need to color them differently
     fig = px.line(
         sales_over_time,
         x="Period",
@@ -223,7 +223,7 @@ fig.update_yaxes(tickprefix="$", showgrid=True)
 
 st.plotly_chart(fig, use_container_width=True)
 
-# ---------- Optional: show raw aggregated data ----------
+#Show raw data so that the user has somethign to drill down to specific order numbers to root cause
 with st.expander("Show aggregated data table"):
     show_cols = ["Period", "Sales"]
     if show_by_category:

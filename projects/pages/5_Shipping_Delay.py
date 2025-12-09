@@ -5,23 +5,26 @@ import plotly.express as px
 from loader import load_data  # shared train.csv loader
 
 
-# ---------- Page config ----------
+#setup the page
 st.set_page_config(
     page_title="Shipping Delay KPI Dashboard",
     layout="wide"
 )
 
-# ---------- Load & prepare data ----------
-df = load_data().copy()
+#Page title
+st.title("Shipping Delay KPI Dashboard")
 
-# Ensure datetime types
+#Load data
+df = load_data()
+
+#clean up datetime
 for col in ["Order Date", "Ship Date"]:
     df[col] = pd.to_datetime(df[col])
 
-# Compute shipping delay in days
+#Compute shipping delay in days
 df["Delay_Days"] = (df["Ship Date"] - df["Order Date"]).dt.days
 
-st.title("Shipping Delay KPI Dashboard")
+
 
 st.markdown(
     """
@@ -30,29 +33,29 @@ assess whether your shipping is meeting KPI targets.
 """
 )
 
-# ---------- Sidebar filters ----------
+#Filters
 st.sidebar.header("Filters")
 
 # Segment filter
-segments = sorted(df["Segment"].dropna().unique()) if "Segment" in df.columns else []
-if segments:
+segments = sorted(df["Segment"].dropna().unique()) if "Segment" in df.columns else [] #if regions is not a column set as empty list
+if segments:#if regions is not an empty list set selected regions based on this
     selected_segments = st.sidebar.multiselect(
         "Segments",
-        options=segments,
-        default=segments,
+        options=sorted(df["Segment"].dropna().unique()),
+        default=sorted(df["Segment"].dropna().unique())
     )
-else:
+else:#if it is an empty list, set it to empty
     selected_segments = segments  # empty list
 
 # Region filter
-regions = sorted(df["Region"].dropna().unique()) if "Region" in df.columns else []
-if regions:
+regions = sorted(df["Region"].dropna().unique()) if "Region" in df.columns else [] #if regions is not a column set as empty list
+if regions: #if regions is not an empty list set selected regions based on this
     selected_regions = st.sidebar.multiselect(
         "Regions",
         options=regions,
         default=regions,
     )
-else:
+else: #if it is an empty list, set it to empty
     selected_regions = regions
 
 # Ship Mode filter
@@ -66,7 +69,7 @@ if ship_modes:
 else:
     selected_ship_modes = ship_modes
 
-# Date range filter (based on Order Date)
+# Date range filter
 min_date = df["Order Date"].min().date()
 max_date = df["Order Date"].max().date()
 
@@ -91,32 +94,32 @@ threshold_days = st.sidebar.slider(
     "Late order threshold (days)",
     min_value=0,
     max_value=max_delay,
-    value=min(3, max_delay),
+    value=min(3, max_delay), #set the default to 3
     help="Orders with delay greater than this number of days will be flagged as late."
 )
 
-# ---------- Apply filters ----------
+#apply filters
 mask = (
     (df["Order Date"].dt.date >= start_date)
     & (df["Order Date"].dt.date <= end_date)
 )
 
-if segments:
+if segments: #if there is a filter for segments not an empty list
     mask &= df["Segment"].isin(selected_segments)
-if regions:
+if regions: #if there is a filter for regions not an empty
     mask &= df["Region"].isin(selected_regions)
-if ship_modes:
+if ship_modes: #if there is a filter for ship modes, not an empty list
     mask &= df["Ship Mode"].isin(selected_ship_modes)
 
 filtered = df[mask].copy()
 
-if filtered.empty:
+if filtered.empty: #don't leave the user hanging on information
     st.warning("No data available for the selected filters.")
     st.stop()
 
-filtered["Is_Late"] = filtered["Delay_Days"] > threshold_days
+filtered["Is_Late"] = filtered["Delay_Days"] > threshold_days #set is late to a boolean on the number of days elapsed
 
-# ---------- Build ORDER-LEVEL view for KPIs & % late ----------
+#tabular view
 # Each order counted once; an order is late if ANY line is late.
 if "Order ID" in filtered.columns:
     order_level = (
@@ -152,13 +155,13 @@ col3.metric("95th Percentile Delay (days)", f"{p95_delay:.2f}")
 col4.metric("Late Orders", f"{late_orders_count:,}")       # absolute count
 col5.metric("% Orders Late", f"{pct_late:.1f}%")           # order-level %
 
-# ---------- Charts row 1: distribution & by ship mode ----------
+#charts
 st.subheader("Delay Distributions")
 
 c1, c2 = st.columns(2)
 
 with c1:
-    st.markdown("**Distribution of Shipping Delay (line-item level)**")
+    st.markdown("**Distribution of Shipping Delay (line-item level)**") #histogram of number of orders and how many days. Colored based on late or not.
     fig_hist = px.histogram(
         filtered,
         x="Delay_Days",
@@ -178,14 +181,14 @@ with c1:
     fig_hist.update_layout(legend_title_text="Late?")
     st.plotly_chart(fig_hist, use_container_width=True)
 
-with c2:
+with c2: #show a box plot with tails and also plot the occurences next to it.
     if "Ship Mode" in filtered.columns:
         st.markdown("**Delay by Ship Mode (line-item level)**")
         fig_box = px.box(
             filtered,
             x="Ship Mode",
             y="Delay_Days",
-            points="all",
+            points="all", #add the overlaid dots
             labels={
                 "Ship Mode": "Ship Mode",
                 "Delay_Days": "Shipping Delay (days)"
@@ -196,14 +199,14 @@ with c2:
     else:
         st.info("No `Ship Mode` column found in data.")
 
-# ---------- Charts row 2: late % and late count over time (ORDER-LEVEL) ----------
+#second row of charts
 st.subheader("Late Orders Over Time (Order-level)")
 
 order_level["OrderMonth"] = (
     order_level["OrderDate"].dt.to_period("M").dt.to_timestamp()
 )
 
-late_over_time = (
+late_over_time = ( #pull out number of orders that were late and the total number of orders
     order_level
     .groupby("OrderMonth", observed=False)
     .agg(
@@ -213,7 +216,7 @@ late_over_time = (
     .reset_index()
 )
 late_over_time["pct_late"] = (
-    late_over_time["late_orders"] / late_over_time["total_orders"] * 100
+    late_over_time["late_orders"] / late_over_time["total_orders"] * 100 #create the percentage
 )
 
 c3, c4 = st.columns(2)
@@ -247,7 +250,7 @@ with c4:
     )
     st.plotly_chart(fig_time_count, use_container_width=True)
 
-# ---------- Detailed late orders table ----------
+# table
 st.subheader(f"Orders Exceeding Threshold (> {threshold_days} days)")
 
 late_orders_df = filtered[filtered["Is_Late"]].copy()
@@ -279,7 +282,7 @@ else:
         if dcol in table.columns:
             table[dcol] = table[dcol].dt.date
 
-    st.caption("Showing late line-items (sorted by longest delay).")
+    st.caption("Showing late line-items (sorted by longest delay).") #this does not dynamically update if the user changes sort
 
     # Use Styler to format Sales as dollars and right-align
     styled_table = (

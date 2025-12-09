@@ -1,4 +1,5 @@
-# data_load.py
+#standardize the way that data is read in for every file 
+# #and make load data into cache
 import pandas as pd
 import streamlit as st
 
